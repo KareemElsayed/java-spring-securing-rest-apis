@@ -9,8 +9,11 @@ import java.util.UUID;
 public class ResolutionInitializer implements SmartInitializingSingleton {
 	private final ResolutionRepository resolutions;
 
-	public ResolutionInitializer(ResolutionRepository resolutions) {
+	private final UserRepository users;
+
+	public ResolutionInitializer(ResolutionRepository resolutions , UserRepository users) {
 		this.resolutions = resolutions;
+		this.users = users;
 	}
 
 	@Override
@@ -18,5 +21,27 @@ public class ResolutionInitializer implements SmartInitializingSingleton {
 		this.resolutions.save(new Resolution("Read War and Peace", "user"));
 		this.resolutions.save(new Resolution("Free Solo the Eiffel Tower", "user"));
 		this.resolutions.save(new Resolution("Hang Christmas Lights", "user"));
+
+		User user = new User("user",
+				"{bcrypt}$2a$12$FQ.yNm3am2RvralFd0DluO6oTWgs/IvDP/ZPs7hM8rmH1oeX8Boy2");
+
+		user.grantAuthority("resolution:write");
+		user.grantAuthority("resolution:read");
+		this.users.save(user);
+
+
+		User hasRead = new User();
+		hasRead.setId(UUID.randomUUID());
+		hasRead.setUsername("hasread");
+		hasRead.setPassword("{bcrypt}$2a$10$MywQEqdZFNIYnx.Ro/VQ0ulanQAl34B5xVjK2I/SDZNVGS5tHQ08W");
+		hasRead.grantAuthority("resolution:read");
+		this.users.save(hasRead);
+
+		User hasWrite = new User();
+		hasWrite.setId(UUID.randomUUID());
+		hasWrite.setUsername("haswrite");
+		hasWrite.setPassword("{bcrypt}$2a$10$MywQEqdZFNIYnx.Ro/VQ0ulanQAl34B5xVjK2I/SDZNVGS5tHQ08W");
+		hasWrite.grantAuthority("resolution:write");
+		this.users.save(hasWrite);
 	}
 }
