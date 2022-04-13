@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.server.resource.authentication.Bearer
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.stereotype.Component;
+import sun.java2d.pipe.SpanShapeRenderer;
 
 import java.util.Collection;
 import java.util.Map;
@@ -21,36 +22,36 @@ import static org.springframework.security.oauth2.core.OAuth2AccessToken.TokenTy
 
 @Component
 public class UserRepositoryJwtAuthenticationConverter implements Converter<Jwt, AbstractAuthenticationToken> {
-
 	private final UserRepository users;
-	private final JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
+	private final JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
 
 	public UserRepositoryJwtAuthenticationConverter(UserRepository users) {
 		this.users = users;
-		this.authoritiesConverter.setAuthorityPrefix("");
+		this.grantedAuthoritiesConverter.setAuthorityPrefix("");
 	}
+
 	@Override
 	public AbstractAuthenticationToken convert(Jwt jwt) {
 		String username = jwt.getSubject();
-		User user = this.users.findByUsername(username)
-				.orElseThrow(() -> new UsernameNotFoundException("no user"));
-		Collection<GrantedAuthority> authorities = this.authoritiesConverter.convert(jwt);
-		Collection<GrantedAuthority> userAuthorities = user.getUserAuthorities().stream()
-				.map(authority -> new SimpleGrantedAuthority(authority.getAuthority()))
-				.collect(Collectors.toList());
-		authorities.retainAll(userAuthorities);
-		OAuth2AuthenticatedPrincipal principal = new UserOAuth2AuthenticatedPrincipal(user, jwt.getClaims(), authorities);
-		OAuth2AccessToken credentials = new OAuth2AccessToken(BEARER, jwt.getTokenValue(), null, null);
-		return new BearerTokenAuthentication(principal, credentials, authorities);
+		return this.users.findByUsername(username)
+				.map(user -> {
+					Collection<GrantedAuthority> authorities = this.grantedAuthoritiesConverter.convert(jwt);
+					Collection<GrantedAuthority> userAuthorities = user.getUserAuthorities().stream()
+							.map(authority -> new SimpleGrantedAuthority(authority.getAuthority()))
+							.collect(Collectors.toList());
+					authorities.retainAll(userAuthorities);
+					OAuth2AuthenticatedPrincipal principal = new UserOAuth2AuthenticatedPrincipal(user, jwt.getClaims(), authorities);
+					OAuth2AccessToken accessToken = new OAuth2AccessToken(BEARER, jwt.getTokenValue(), null, null);
+					return new BearerTokenAuthentication(principal, accessToken, authorities);
+				}).orElseThrow(() -> new UsernameNotFoundException("no user"));
 	}
 
-	private static class UserOAuth2AuthenticatedPrincipal extends User
-			implements OAuth2AuthenticatedPrincipal {
+	private static class UserOAuth2AuthenticatedPrincipal extends User implements OAuth2AuthenticatedPrincipal {
+		private Map<String, Object> attributes;
+		private Collection<GrantedAuthority> authorities;
 
-		private final Map<String, Object> attributes;
-		private final Collection<GrantedAuthority> authorities;
-
-		public UserOAuth2AuthenticatedPrincipal(User user, Map<String, Object> attributes, Collection<GrantedAuthority> authorities) {
+		public UserOAuth2AuthenticatedPrincipal(
+				User user, Map<String, Object> attributes, Collection<GrantedAuthority> authorities) {
 			super(user);
 			this.attributes = attributes;
 			this.authorities = authorities;
@@ -62,7 +63,7 @@ public class UserRepositoryJwtAuthenticationConverter implements Converter<Jwt, 
 		}
 
 		@Override
-		public Collection<GrantedAuthority> getAuthorities() {
+		public Collection<? extends GrantedAuthority> getAuthorities() {
 			return this.authorities;
 		}
 
