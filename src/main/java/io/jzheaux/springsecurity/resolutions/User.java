@@ -21,6 +21,12 @@ public class User implements Serializable {
 	String fullName;
 
 	@Column
+	String subscription;
+
+	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	Collection<User> friends = new ArrayList<>();
+
+	@Column
 	boolean enabled = true;
 
 	@OneToMany(fetch= FetchType.EAGER, cascade=CascadeType.ALL) Collection<UserAuthority> userAuthorities = new ArrayList<>();
@@ -42,7 +48,23 @@ public class User implements Serializable {
 		this.password = user.password;
 		this.enabled = user.enabled;
 		this.fullName = user.fullName;
+		this.subscription = user.subscription;
+		this.friends = user.friends;
 		this.userAuthorities = user.userAuthorities;
+	}
+
+	public String getSubscription() {
+		return subscription;
+	}
+	public Collection<User> getFriends() {
+		return friends;
+	}
+	public void addFriend(User friend) {
+		friends.add(friend);
+	}
+
+	public void setSubscription(String subscription) {
+		this.subscription = subscription;
 	}
 
 	public String getFullName() {
